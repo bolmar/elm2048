@@ -1,5 +1,6 @@
 import Keyboard
 import Random
+import Either (..)
 
 startgrid : [[Int]]
 startgrid = --addnew 5 <| addnew 10 <| split 4 <| repeat 16 0
@@ -18,47 +19,58 @@ box n = colour n <| container 50 50 middle <| plainText <| if n == 0 then " " el
 
 folder : ((Int, Int), Float) -> [[Int]] -> [[Int]]
 folder (keypress, randseed) grid =
- addnew' randseed <| action keypress grid
+ either id (addnew' randseed) <| action keypress grid
 
-merge : [Int] -> [Int]
+merge : [Int] -> Either [Int] [Int]
 merge l =
- if all (\e -> e == 0) <| tail l           -- base case - all zeroes
- then l
- else
-  case l of
-   [a]         -> [a]
-   0 :: t      -> merge <| t ++ [0]        -- shift left
-   a :: 0 :: t -> merge <| a :: t ++ [0]   -- shift left
-   a :: b :: t ->
-    if a == b
-    then
-     (a + a) :: (merge <| t ++ [0])        -- merge
-    else
-     a :: (merge <| b :: t)
+ if all (\e -> e == 0) <| tail l
+  then Left l
+  else
+   case l of
+    0 :: t       -> either Right Right <| merge <| t ++ [0]
+    a :: 0 :: t  -> either Right Right <| merge <| a :: t ++ [0]
+    a :: b :: t  -> if a == b then either (Right . (::) (a + a)) (Right . (::) (a + a)) <| merge <| t ++ [0]
+                              else either (Left . ((::) a)) (Right . ((::) a)) <| merge <| b :: t
 
+egrem : [Int] -> Either [Int] [Int]
+egrem = (either (Left . reverse) (Right . reverse)) . merge . reverse
 
-cols : ([Int] -> [Int]) -> [[Int]] -> [[Int]]
+cols : ([Int] -> Either [Int] [Int]) -> [[Int]] -> Either [[Int]] [[Int]]
 cols mergef g =
  case g of
-  []::_ -> g
+  [] :: _ -> Left g
   g -> let heads = map head g
            tails = map tail g
            meads = mergef heads
-       in zipWith (::) meads <| cols mergef tails
+       in ezip meads <| cols mergef tails
 
-rows = map
+ezip : Either [Int] [Int] -> Either [[Int]] [[Int]] -> Either [[Int]] [[Int]]
+ezip meads mails =
+ case either id id meads of
+  [] -> Left []
+  _  ->
+   if isRight meads || isRight mails
+    then Right <| zipWith (::) (either id id meads) (either id id mails)
+    else Left  <| zipWith (::) (either id id meads) (either id id mails)
 
-egrem : [Int] -> [Int]
-egrem = reverse . merge . reverse
+rows : ([Int] -> Either [Int] [Int]) -> [[Int]] -> Either [[Int]] [[Int]]
+rows mergef = reduce . map mergef
 
-action : (Int, Int) -> [[Int]] -> [[Int]]
+reduce : [Either a a] -> Either [a] [a]
+reduce l = if any isRight l then Right <| strip l
+                            else Left  <| strip l
+
+strip = map <| either id id
+
+
+action : (Int, Int) -> [[Int]] -> Either [[Int]] [[Int]]
 action key =
  case key of
   ( -1,  0) -> rows merge -- left
   (  0,  1) -> cols merge -- up
   (  1,  0) -> rows egrem -- right
   (  0, -1) -> cols egrem -- down
-  _ -> id
+  _ -> Left . id
 
 count0s : [[Int]] -> Int
 count0s = foldl (\a b -> foldl (+) b (map (\n -> if n == 0 then 1 else 0) a)) 0
