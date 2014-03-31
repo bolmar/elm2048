@@ -93,14 +93,16 @@ arrows : Signal {x:Int, y:Int}
 arrows = dropIf (\{x,y} -> (x,y) == (0,0)) {x=0,y=1} Keyboard.arrows
 
 colour : Int -> Element -> Element
-colour n = color <|
- case n of
-  2   -> lightBlue
-  4   -> lightGreen
-  8   -> lightYellow
-  16  -> lightOrange
-  32  -> lightPurple
-  64  -> darkBlue
-  128 -> darkGreen
-  256 -> darkOrange
-  _ -> grey
+colour n = color <| head <| drop (logBase 2 n) colours
+
+colours =
+  [ grey
+  , lightBlue
+  , lightGreen
+  , lightYellow
+  , lightOrange
+  , lightPurple
+  , darkBlue
+  , darkGreen
+  , darkOrange
+  ] ++ repeat 10 grey
