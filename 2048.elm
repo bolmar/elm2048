@@ -45,22 +45,18 @@ cols mergef g =
        in ezip meads <| cols mergef tails
 
 ezip : Either [Int] [Int] -> Either [[Int]] [[Int]] -> Either [[Int]] [[Int]]
-ezip meads mails =
- case either id id meads of
-  [] -> Left []
-  _  ->
-   if isRight meads || isRight mails
-    then Right <| zipWith (::) (either id id meads) (either id id mails)
-    else Left  <| zipWith (::) (either id id meads) (either id id mails)
+ezip heads tails =
+ let f = if isRight heads || isRight tails then Right else Left
+ in f <| zipWith (::) (strip heads) (strip tails)
 
 rows : ([Int] -> Either [Int] [Int]) -> [[Int]] -> Either [[Int]] [[Int]]
 rows mergef = reduce . map mergef
 
 reduce : [Either a a] -> Either [a] [a]
-reduce l = if any isRight l then Right <| strip l
-                            else Left  <| strip l
+reduce l = if any isRight l then Right <| map strip l
+                            else Left  <| map strip l
 
-strip = map <| either id id
+strip = either id id
 
 
 action : (Int, Int) -> [[Int]] -> Either [[Int]] [[Int]]
