@@ -3,8 +3,8 @@ import Random
 import Either (..)
 
 startgrid : [[Int]]
-startgrid = --addnew 5 <| addnew 10 <| split 4 <| repeat 16 0
- split 4 <| repeat 16 0
+startgrid = addnew 5 <| addnew 10 <| split 4 <| repeat 16 0
+-- split 4 <| repeat 16 0
 
 main = flow' . show' <~ foldp folder startgrid (input arrows)
 
