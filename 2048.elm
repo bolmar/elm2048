@@ -118,5 +118,9 @@ colours =
   , lightPurple
   , darkBlue
   , darkGreen
+  , darkYellow
   , darkOrange
+  , darkBrown
+  , darkRed
+  , darkPurple
   ] ++ repeat 10 grey
