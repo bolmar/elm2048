@@ -67,31 +67,31 @@ reduce l = if any isRight l then Right <| map strip l
 -- escape from eitherland
 strip = either id id
 
+-- spawn a new tile in a random place
 addnew : (Float, Float) -> [[Int]] -> [[Int]]
 addnew (rnd1, rnd2) grid =
- let index = floor <| (*) rnd1 <| toFloat <| count0s grid
- in addnew' rnd2 index grid
+ let list = concat grid
+     n    = pickrand0 rnd1 list
+     tile = if rnd2 > 0.92 then 2 else 1
+ in split 4 <| setnth0 n tile list
 
-addnew' : Float -> Int -> [[Int]] -> [[Int]]
-addnew' rnd n g = split 4 <| setnth0 n (starttile rnd) <| concat g
+pickrand0 : Float -> [Int] -> Int
+pickrand0 rnd = floor . ((*) rnd) . toFloat . count0s'
 
-starttile : Float -> Int
-starttile rnd = if rnd > 0.92 then 2 else 1
+count0s' : [Int] -> Int
+count0s' = length . (filter ((==) 0))
 
-count0s : [[Int]] -> Int
-count0s = length . (filter ((==) 0)) . concat
+setnth0 : Int -> Int -> [Int] -> [Int]
+setnth0 n y (x::xs) =
+ if | n == 0 && x == 0 -> y :: xs
+    | n == 0 -> x :: (setnth0 n y xs)
+    | True   -> x :: (setnth0 (n - 1) y xs)
 
 split : Int -> [Int] -> [[Int]]
 split n l =
  if length l <= n
  then [l]
  else take n l :: (split n <| drop n l)
-
-setnth0 : Int -> Int -> [Int] -> [Int]
-setnth0 n a (x::xs) =
- if | n == 0 && x == 0 -> a :: xs
-    | n == 0 -> x :: (setnth0 n a xs)
-    | True   -> x :: (setnth0 (n - 1) a xs)
 
 -- transform input
 input : Signal {x:Int, y:Int} -> Signal ((Int, Int), (Float, Float))
