@@ -3,9 +3,9 @@ import Random
 import Either (..)
 
 startgrid : [[Int]]
-startgrid = addnew' 5 2 <| addnew' 10 2 <| split 4 <| repeat 16 0
+startgrid = split 4 <| repeat 16 0
 
-main = flow' . show' <~ foldp step startgrid (input arrows)
+main = flow' . show' <~ foldp step startgrid (input <| merges [init, arrows])
 
 -- layout elements
 flow' : [[Element]] -> Element
@@ -31,6 +31,7 @@ action key =
   (  0,  1) -> cols merge                         -- up   
   (  1,  0) -> rows <| on merge reverse . reverse -- right
   (  0, -1) -> cols <| on merge reverse . reverse -- down
+  (  2,  2) -> Right . id
   _         -> Left . id
 
 merge : [Int] -> Either [Int] [Int]
@@ -92,12 +93,17 @@ setnth0 n a (x::xs) =
     | n == 0 -> x :: (setnth0 n a xs)
     | True   -> x :: (setnth0 (n - 1) a xs)
 
+-- transform input
 input : Signal {x:Int, y:Int} -> Signal ((Int, Int), (Float, Float))
 input keys = (,) <~ lift (\{x, y} -> (x, y)) keys ~ randgen keys
 
+-- simulate two fake key presses to initialise the grid
+init : Signal {x:Int, y:Int}
+init = always {x=2,y=2} <~ (dropIf (\x -> x > 2) 0 <| count <| fps 10)
+
 -- drop key up signals 
 arrows : Signal {x:Int, y:Int}
-arrows = dropIf (\{x,y} -> (x,y) == (0,0)) {x=0,y=1} Keyboard.arrows
+arrows = dropIf (\{x,y} -> (x,y) == (0,0)) {x=0,y=1} Keyboard.arrows    
 
 randgen : Signal a -> Signal (Float, Float)
 randgen sig = (\[f1,f2] -> (f1,f2)) <~ (Random.floatList <| always 2 <~ sig)
