@@ -5,23 +5,33 @@ import Either (..)
 startgrid : [[Int]]
 startgrid = split 4 <| repeat 16 0
 
-main = flow' . show' <~ foldp step startgrid (input <| merges [init, arrows])
+main = flow' . show' <~ foldp step (startgrid, 0) (input <| merges [init, arrows])
 
 -- layout elements
 flow' : [[Element]] -> Element
 flow' = flow down . map (flow right)
 
 -- translate grid to graphical elements
-show' : [[Int]] -> [[Element]]
-show' = map (map box)
+show' : ([[Int]], Int) -> [[Element]]
+show' (grid, scoremod) = map (map box) (grid ++ [[score grid + scoremod]])
 
 box : Int -> Element
 box n = colour n <| container 50 50 middle <| plainText <| if n == 0 then " " else show n
 
+score : [[Int]] -> Int
+score = sum . (map tilescore) . concat
+
+tilescore : Int -> Int
+tilescore n =
+ case n of
+  0 -> 0
+  _ -> n * ((logBase 2 n) - 1)
+
 -- act on keypress and maybe add a new tile
-step : ((Int, Int), (Float, Float)) -> [[Int]] -> [[Int]]
-step (keypress, randseed) grid =
- action keypress grid |> either id (addnew randseed)
+step : ((Int, Int), (Float, Float)) -> ([[Int]], Int) -> ([[Int]], Int)
+step (keypress, randseed) (grid, scoremod) =
+ let (newgrid, newmod) = action keypress grid |> either ((flip (,) 0) . id) (addnew randseed)
+ in (newgrid, scoremod + newmod)
 
 -- select merge direction based on key input
 action : (Int, Int) -> [[Int]] -> Either [[Int]] [[Int]]
@@ -68,18 +78,18 @@ reduce l = if any isRight l then Right <| map strip l
 strip = either id id
 
 -- spawn a new tile in a random place
-addnew : (Float, Float) -> [[Int]] -> [[Int]]
+addnew : (Float, Float) -> [[Int]] -> ([[Int]], Int)
 addnew (rnd1, rnd2) grid =
  let list = concat grid
-     n    = pickrand0 rnd1 list
-     tile = if rnd2 > 0.92 then 2 else 1
- in split 4 <| setnth0 n tile list
+     n           = pickrand0 rnd1 list
+     (tile, mod) = if rnd2 > 0.9 then (4, -4) else (2, 0)
+ in (split 4 <| setnth0 n tile list, mod)
 
 pickrand0 : Float -> [Int] -> Int
-pickrand0 rnd = floor . ((*) rnd) . toFloat . count0s'
+pickrand0 rnd = floor . ((*) rnd) . toFloat . count0s
 
-count0s' : [Int] -> Int
-count0s' = length . (filter ((==) 0))
+count0s : [Int] -> Int
+count0s = length . (filter ((==) 0))
 
 setnth0 : Int -> Int -> [Int] -> [Int]
 setnth0 n y (x::xs) =
@@ -110,7 +120,7 @@ randgen sig = (\[f1,f2] -> (f1,f2)) <~ (Random.floatList <| always 2 <~ sig)
 
 -- colour element with nth colour
 colour : Int -> Element -> Element
-colour n = color <| head <| drop (logBase 2 <| n + 1) colours
+colour n = color <| head <| drop (logBase 2 n) colours
 
 colours =
   [ grey
